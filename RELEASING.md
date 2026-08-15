@@ -34,14 +34,18 @@ Docker caches that layer for later builds.
 
 ## Configure GitHub Actions
 
-The release workflow needs two repository secrets:
+The release workflow needs one repository secret containing a random encryption
+key. Create it once with GitHub CLI:
 
-- `MACOS_SDK_URL`: a private HTTPS URL from which the runner can download the
-  `MacOSX15.2.sdk.tar.xz` archive.
-- `MACOS_SDK_SHA256`: the SHA-256 printed by `package-macos-sdk.sh`.
+```bash
+openssl rand -hex 32 | gh secret set MACOS_SDK_KEY --repo XIAZY/wcctl
+```
 
-The URL must be accessible non-interactively from a GitHub-hosted Ubuntu runner.
-Do not publish the SDK as a release asset or commit it to the repository.
+On each release, a GitHub-hosted macOS runner packages the macOS 15.2 SDK from
+Xcode 16.2 and encrypts it with this key. The encrypted archive is transferred
+as a short-lived workflow artifact to the Ubuntu job, which decrypts it and
+builds with osxcross in Docker. The workflow deletes the transfer artifact when
+the release job finishes. The SDK is never committed or attached to a release.
 
 If the SDK is installed somewhere other than the standard Command Line Tools
 directory, set its path while packaging:
@@ -55,10 +59,10 @@ MACOS_SDK_PATH=/path/to/MacOSX15.2.sdk ./scripts/package-macos-sdk.sh
 After the secrets are configured, create and push a version tag:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.0.1
+git push origin v0.0.1
 ```
 
-The workflow builds both architectures inside Docker on Ubuntu, verifies the
-artifacts, and creates a GitHub Release for the tag with both tarballs and
+The workflow obtains the SDK on macOS, then builds both architectures inside
+Docker on Ubuntu and creates a GitHub Release for the tag with both tarballs and
 `SHA256SUMS` attached.
