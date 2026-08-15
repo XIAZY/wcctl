@@ -15,7 +15,7 @@ before building.
 Install Docker, then run:
 
 ```bash
-./scripts/build-release.sh
+WCCTL_VERSION=v0.0.0 ./scripts/build-release.sh
 ```
 
 The command runs Linux containers to build both architectures and writes:
@@ -38,5 +38,7 @@ git tag v0.0.1
 git push origin v0.0.1
 ```
 
-The workflow builds both architectures inside Docker on Ubuntu and creates a
-GitHub Release for the tag with both tarballs and `SHA256SUMS` attached.
+The workflow passes the pushed tag to the Docker build, embeds it in both
+binaries, verifies the embedded value, and then creates a GitHub Release with
+both tarballs and `SHA256SUMS` attached. On macOS, the released binary reports
+that tag with `wcctl version`.

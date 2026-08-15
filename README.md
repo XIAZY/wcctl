@@ -66,6 +66,12 @@ the executable and can be printed at any time:
 wcctl license
 ```
 
+To see which release is installed:
+
+```bash
+wcctl version
+```
+
 ### 2. Set up database access
 
 WeChat encrypts its local databases. `wcctl` needs to acquire and verify

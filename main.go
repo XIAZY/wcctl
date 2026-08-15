@@ -10,6 +10,7 @@
 //	sessions     query recent conversations from a keyed WeChat session database (session.go)
 //	user         inspect and select users from the key store (user.go)
 //	license      print the license terms embedded in the executable (license.go)
+//	version      print the version embedded at build time (version.go)
 //
 // Layout: main.go handles dispatch and shared helpers; mach.go wraps all cgo/Mach calls.
 package main
@@ -45,12 +46,17 @@ subcommands:
   messages     wcctl messages -chat USERNAME [-limit N] [-before TIME] [-user USER] [-json] [-keys PATH]
   sessions     wcctl sessions [-limit N] [-user USER] [-json] [-keys PATH]
   user         wcctl user <ls|current|use|clear>
-  license      wcctl license`)
+  license      wcctl license
+  version      wcctl version`)
 }
 
 func main() {
 	if isLicenseCommand(os.Args) {
 		cmdLicense(os.Args[2:])
+		return
+	}
+	if isVersionCommand(os.Args) {
+		cmdVersion(os.Args[2:])
 		return
 	}
 
@@ -92,6 +98,8 @@ func main() {
 		cmdUser(os.Args[2:])
 	case "license":
 		cmdLicense(os.Args[2:])
+	case "version":
+		cmdVersion(os.Args[2:])
 	default:
 		usage()
 		os.Exit(2)

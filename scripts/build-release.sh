@@ -5,8 +5,14 @@ set -euo pipefail
 readonly repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 readonly output_directory="${1:-${repository_root}/dist}"
 readonly dockerfile="${repository_root}/Dockerfile.osxcross"
+readonly build_version="${WCCTL_VERSION:-dev}"
 
-for command_name in docker tar; do
+if [[ ! "${build_version}" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]*$ ]]; then
+  echo "Invalid WCCTL_VERSION: ${build_version}" >&2
+  exit 2
+fi
+
+for command_name in docker strings tar; do
   if ! command -v "${command_name}" >/dev/null 2>&1; then
     echo "Required command not found: ${command_name}" >&2
     exit 1
@@ -38,6 +44,7 @@ for architecture in amd64 arm64; do
   docker buildx build \
     --file "${dockerfile}" \
     --build-arg "TARGETARCH=${architecture}" \
+    --build-arg "VERSION=${build_version}" \
     --output "type=local,dest=${artifact_directory}" \
     "${repository_root}"
 
@@ -47,6 +54,11 @@ for architecture in amd64 arm64; do
     exit 1
   fi
   chmod 0755 "${binary}"
+
+  if ! strings "${binary}" | grep -Fx -- "${build_version}" >/dev/null; then
+    echo "Binary does not contain the expected version: ${build_version}" >&2
+    exit 1
+  fi
 
   archive="${output_directory}/wcctl-darwin-${architecture}.tar.gz"
   tar -C "${artifact_directory}" -czf "${archive}" wcctl
