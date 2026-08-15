@@ -52,13 +52,11 @@ func processExists(pid int) bool {
 }
 
 func isWeChatMainProcess(process processInfo) bool {
-	name := strings.ToLower(strings.TrimSpace(process.Name))
-	base := strings.ToLower(filepath.Base(process.Path))
-	if name != "wechat" && base != "wechat" {
+	if process.Path == "" {
 		return false
 	}
-	lowerPath := strings.ToLower(process.Path)
-	return lowerPath == "" || strings.Contains(lowerPath, ".app/contents/macos/wechat")
+	cleanPath := strings.ToLower(filepath.ToSlash(filepath.Clean(process.Path)))
+	return strings.HasSuffix(cleanPath, "/wechat.app/contents/macos/wechat")
 }
 
 var findRunningWeChat = func() []processInfo {

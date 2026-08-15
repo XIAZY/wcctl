@@ -38,15 +38,18 @@ func TestRequireSIPDisabledRejectsEnabledAndCommandFailure(t *testing.T) {
 func TestIsWeChatMainProcess(t *testing.T) {
 	for _, process := range []processInfo{
 		{PID: 1, Name: "WeChat", Path: "/Applications/WeChat.app/Contents/MacOS/WeChat"},
-		{PID: 2, Name: "WeChat", Path: ""},
+		{PID: 2, Name: "anything", Path: "/private/var/AppTranslocation/WeChat.app/Contents/MacOS/WeChat"},
 	} {
 		if !isWeChatMainProcess(process) {
 			t.Fatalf("main process rejected: %#v", process)
 		}
 	}
 	for _, process := range []processInfo{
-		{PID: 3, Name: "WeChat Helper", Path: "/Applications/WeChat.app/Contents/Frameworks/WeChat Helper"},
+		{PID: 3, Name: "WeChat", Path: ""},
 		{PID: 4, Name: "WeChat", Path: "/tmp/WeChat"},
+		{PID: 5, Name: "WeChatAppEx", Path: "/Applications/WeChat.app/Contents/MacOS/WeChatAppEx.app/Contents/MacOS/WeChatAppEx"},
+		{PID: 6, Name: "WeChatAppEx Helper", Path: "/Applications/WeChat.app/Contents/MacOS/WeChatAppEx.app/Contents/Frameworks/WeChatAppEx Helper.app/Contents/MacOS/WeChatAppEx Helper"},
+		{PID: 7, Name: "wxutility", Path: "/Applications/WeChat.app/Contents/Frameworks/wxutility"},
 	} {
 		if isWeChatMainProcess(process) {
 			t.Fatalf("non-main process accepted: %#v", process)
