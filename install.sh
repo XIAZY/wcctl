@@ -4,7 +4,11 @@ set -eu
 
 repository="XIAZY/wcctl"
 version="latest"
-install_directory="${WCCTL_INSTALL_DIR:-/usr/local/bin}"
+default_install_directory=""
+if [ -n "${HOME:-}" ]; then
+  default_install_directory="${HOME}/.local/bin"
+fi
+install_directory="${WCCTL_INSTALL_DIR:-${default_install_directory}}"
 
 usage() {
   cat <<'EOF'
@@ -13,7 +17,7 @@ Install the latest wcctl binary release for macOS.
 Usage: install.sh [--dir DIRECTORY] [--version VERSION]
 
 Options:
-  --dir DIRECTORY   Install directory (default: /usr/local/bin)
+  --dir DIRECTORY   Install directory (default: ~/.local/bin)
   --version VERSION Install a specific release, such as v0.0.1
   -h, --help        Show this help
 
@@ -48,7 +52,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 if [ -z "${install_directory}" ]; then
-  echo "Install directory cannot be empty." >&2
+  echo "Install directory cannot be empty. Set HOME or use --dir." >&2
   exit 2
 fi
 
@@ -169,3 +173,50 @@ else
 fi
 
 echo "Installed wcctl to ${destination}"
+
+path_contains_directory() {
+  case ":${PATH:-}:" in
+    *:"$1":*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+if ! path_contains_directory "${install_directory}"; then
+  if [ "${install_directory}" = "${default_install_directory}" ] \
+      && [ -n "${HOME:-}" ]; then
+    shell_path="${SHELL:-}"
+    shell_name="${shell_path##*/}"
+    case "${shell_name}" in
+      bash) shell_config="${HOME}/.bashrc" ;;
+      zsh) shell_config="${HOME}/.zshrc" ;;
+      *)
+        if [ -f "${HOME}/.zshrc" ] || [ ! -f "${HOME}/.bashrc" ]; then
+          shell_config="${HOME}/.zshrc"
+        else
+          shell_config="${HOME}/.bashrc"
+        fi
+        ;;
+    esac
+
+    path_entry='export PATH="$HOME/.local/bin:$PATH"'
+    path_configured=true
+    if [ ! -f "${shell_config}" ] \
+        || ! grep -Fqx "${path_entry}" "${shell_config}"; then
+      if printf '\n%s\n' "${path_entry}" >> "${shell_config}"; then
+        echo "Added ${install_directory} to PATH in ${shell_config}"
+      else
+        path_configured=false
+        echo "Warning: could not update ${shell_config}." >&2
+        echo "Add ${install_directory} to PATH manually." >&2
+      fi
+    else
+      echo "${install_directory} is already configured in ${shell_config}"
+    fi
+    if [ "${path_configured}" = true ]; then
+      echo "Open a new terminal for the PATH change to take effect."
+    fi
+  else
+    echo "Warning: ${install_directory} is not in PATH." >&2
+    echo "Add it to your shell configuration before running wcctl by name." >&2
+  fi
+fi

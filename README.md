@@ -48,12 +48,14 @@ curl -fsSL https://raw.githubusercontent.com/XIAZY/wcctl/main/install.sh | sh
 ```
 
 The installer detects Apple Silicon or Intel automatically, verifies the
-downloaded release checksum, and installs `wcctl` to `/usr/local/bin`. It
-may ask for administrator access to write there. To install somewhere else:
+downloaded release checksum, and installs `wcctl` to `~/.local/bin` without
+requiring administrator access. If needed, it adds that directory to `PATH` in
+your `.zshrc` or `.bashrc`; open a new terminal afterward. To install somewhere
+else:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/XIAZY/wcctl/main/install.sh \
-  | sh -s -- --dir "$HOME/.local/bin"
+  | sh -s -- --dir "/path/to/bin"
 ```
 
 When using a custom directory, make sure it is included in your `PATH`.
