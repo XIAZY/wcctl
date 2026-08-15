@@ -1,7 +1,6 @@
 .git
 .github
-.osxcross/*
-!.osxcross/MacOSX15.2.sdk.tar.xz
+.osxcross
 captures
 dumps
 dist

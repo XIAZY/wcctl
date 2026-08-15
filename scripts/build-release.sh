@@ -3,15 +3,8 @@
 set -euo pipefail
 
 readonly repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-readonly sdk_archive="${repository_root}/.osxcross/MacOSX15.2.sdk.tar.xz"
 readonly output_directory="${1:-${repository_root}/dist}"
 readonly dockerfile="${repository_root}/Dockerfile.osxcross"
-
-if [[ ! -f "${sdk_archive}" ]]; then
-  echo "Missing ${sdk_archive}" >&2
-  echo "On macOS, create it with: ./scripts/package-macos-sdk.sh" >&2
-  exit 1
-fi
 
 for command_name in docker tar; do
   if ! command -v "${command_name}" >/dev/null 2>&1; then

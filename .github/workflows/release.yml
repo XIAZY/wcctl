@@ -6,71 +6,16 @@ on:
       - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  prepare-sdk:
-    runs-on: macos-15
-    timeout-minutes: 15
-    outputs:
-      artifact-id: ${{ steps.upload.outputs.artifact-id }}
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-
-      - name: Package and encrypt macOS SDK
-        env:
-          MACOS_SDK_KEY: ${{ secrets.MACOS_SDK_KEY }}
-        run: |
-          test -n "${MACOS_SDK_KEY}"
-          MACOS_SDK_PATH=/Applications/Xcode_16.2.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk \
-            ./scripts/package-macos-sdk.sh
-          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 -md sha256 \
-            -pass env:MACOS_SDK_KEY \
-            -in .osxcross/MacOSX15.2.sdk.tar.xz \
-            -out .osxcross/MacOSX15.2.sdk.tar.xz.enc
-          rm .osxcross/MacOSX15.2.sdk.tar.xz
-
-      - name: Transfer encrypted SDK to Linux job
-        id: upload
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: macos-sdk-${{ github.run_id }}
-          path: .osxcross/MacOSX15.2.sdk.tar.xz.enc
-          if-no-files-found: error
-          retention-days: 1
-          compression-level: 0
-          include-hidden-files: true
-
   release:
-    needs: prepare-sdk
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    permissions:
-      actions: write
-      contents: write
 
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-
-      - name: Download encrypted macOS SDK
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: macos-sdk-${{ github.run_id }}
-          path: .osxcross
-
-      - name: Decrypt macOS SDK
-        env:
-          MACOS_SDK_KEY: ${{ secrets.MACOS_SDK_KEY }}
-        run: |
-          test -n "${MACOS_SDK_KEY}"
-          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -md sha256 \
-            -pass env:MACOS_SDK_KEY \
-            -in .osxcross/MacOSX15.2.sdk.tar.xz.enc \
-            -out .osxcross/MacOSX15.2.sdk.tar.xz
-          rm .osxcross/MacOSX15.2.sdk.tar.xz.enc
 
       - name: Build release artifacts on Linux
         run: ./scripts/build-release.sh
@@ -86,13 +31,3 @@ jobs:
             --generate-notes \
             --title "${GITHUB_REF_NAME}" \
             --verify-tag
-
-      - name: Delete encrypted SDK artifact
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SDK_ARTIFACT_ID: ${{ needs.prepare-sdk.outputs.artifact-id }}
-        run: |
-          test -n "${SDK_ARTIFACT_ID}"
-          gh api --method DELETE \
-            "repos/${GITHUB_REPOSITORY}/actions/artifacts/${SDK_ARTIFACT_ID}"
