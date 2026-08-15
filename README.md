@@ -41,6 +41,30 @@ You need:
 - macOS 12 or newer
 - WeChat 4.x
 
+#### Easiest option: ask an AI agent to install it
+
+If you use [Codex](https://learn.chatgpt.com/docs/quickstart) or another trusted
+AI agent that can access the Terminal on your Mac, it can install and verify
+`wcctl` for you. Start a new task and paste this message:
+
+> Install the latest release of wcctl from
+> https://github.com/XIAZY/wcctl. Use the project's official installation
+> script and its default user-local installation directory. Update my PATH only
+> if necessary, then run `wcctl version` to verify the installation. Explain
+> any permission request before asking me to approve it. Do not accept the
+> wcctl license on my behalf.
+
+The agent should report an installation path ending in
+`.local/bin/wcctl` and a version line beginning with `wcctl v`. It may
+ask for permission to download the installer or update your shell
+configuration. Those are expected; unrelated system changes are not.
+
+Installation does not accept the `wcctl` license. The first time you use a
+data command, read the conditions and answer the confirmation questions
+yourself.
+
+#### Install it yourself in Terminal
+
 Install the latest release:
 
 ```bash
