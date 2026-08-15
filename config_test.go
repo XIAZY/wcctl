@@ -20,6 +20,7 @@ func TestEnsureLicenseAcceptancePromptsAndPersistsPrivateConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, statement := range []string{
+		"wcctl license",
 		"read and agree",
 		"not physically located",
 		"lawful access",

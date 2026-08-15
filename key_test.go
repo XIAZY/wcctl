@@ -95,6 +95,15 @@ func TestRunKeyAcquireOrchestratesCaptureAndCleanup(t *testing.T) {
 	if _, err := os.Stat(generatedCapture); !os.IsNotExist(err) {
 		t.Fatalf("temporary capture was not removed: %v", err)
 	}
+	for _, expected := range []string{
+		"Re-enable System Integrity Protection now",
+		"csrutil enable",
+		"Normal wcctl queries work with SIP enabled",
+	} {
+		if !strings.Contains(errors.String(), expected) {
+			t.Fatalf("successful acquisition is missing SIP reminder %q:\n%s", expected, errors.String())
+		}
+	}
 }
 
 func TestKeyAcquireRequiresDisabledSIPBeforeProcessDiscovery(t *testing.T) {

@@ -37,7 +37,9 @@ func ensureLicenseAcceptance(path string, input io.Reader, output io.Writer) err
 		return nil
 	}
 
-	fmt.Fprintln(output, `Before using wcctl, please read the LICENSE file.
+	fmt.Fprintln(output, `Before using wcctl, please read its license terms by running:
+
+  wcctl license
 
 Confirm all of the following:
   1. You have read and agree to the Data Interoperability Source License v1.0.

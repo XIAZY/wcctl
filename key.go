@@ -148,6 +148,7 @@ func runKeyAcquire(args []string, input io.Reader, output, errorOutput io.Writer
 		return err
 	}
 	fmt.Fprintf(errorOutput, "[3/3] Saved %d verified database key(s).\n", matched)
+	defer printSIPReminder(errorOutput)
 
 	keepCapture := options.KeepDump || !automatic
 	if keepCapture {
@@ -159,6 +160,12 @@ func runKeyAcquire(args []string, input io.Reader, output, errorOutput io.Writer
 	}
 	fmt.Fprintln(errorOutput, "temporary memory capture deleted")
 	return nil
+}
+
+func printSIPReminder(output io.Writer) {
+	fmt.Fprintln(output, "\nSECURITY: Re-enable System Integrity Protection now.\n"+
+		"Restart into macOS Recovery, open Terminal, run `csrutil enable`, then restart your Mac.\n"+
+		"Normal wcctl queries work with SIP enabled.")
 }
 
 func chooseWeChatProcess(processes []processInfo, input io.Reader, output io.Writer) (processInfo, error) {

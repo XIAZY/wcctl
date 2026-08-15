@@ -59,7 +59,12 @@ curl -fsSL https://raw.githubusercontent.com/XIAZY/wcctl/main/install.sh \
 When using a custom directory, make sure it is included in your `PATH`.
 
 The first time you run `wcctl`, it will show the license conditions and ask
-you to confirm that they apply to your use.
+you to confirm that they apply to your use. The complete license is embedded in
+the executable and can be printed at any time:
+
+```bash
+wcctl license
+```
 
 ### 2. Set up database access
 
@@ -89,6 +94,8 @@ The command guides you through account selection and tells you exactly what it
 is about to do. WeChat will be closed during acquisition, so save anything
 unfinished first. When acquisition succeeds, the verified keys are saved in
 `~/.wcctl/keys.json` and the temporary capture is deleted.
+
+After saving the keys, `wcctl` prominently reminds you to re-enable SIP.
 
 Restart WeChat when you are ready. Re-enable SIP from macOS Recovery with
 `csrutil enable`, restart the Mac, and confirm with `csrutil status`. Normal
