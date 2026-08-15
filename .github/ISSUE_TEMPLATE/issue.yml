@@ -1,0 +1,31 @@
+name: Issue
+description: Report a problem or request an improvement
+title: ""
+body:
+  - type: checkboxes
+    id: schedule_a
+    attributes:
+      label: Schedule A confirmation
+      description: Read Schedule A in the [Data Interoperability Source License 1.0](https://github.com/XIAZY/wcctl/blob/main/LICENSE#L34-L122) before continuing.
+      options:
+        - label: I confirm that all requirements of Schedule A have been met for my use and any activity associated with this issue.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What would you like to report or request?
+      description: Explain what happened, what you expected, or what you would like to improve.
+      placeholder: Please include enough detail for someone else to understand the issue.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: If relevant, include your macOS, WeChat, and wcctl versions. Do not include database keys, memory captures, messages, or other private data.
+      placeholder: |
+        macOS version:
+        WeChat version:
+        wcctl version:

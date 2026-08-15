@@ -18,6 +18,12 @@ wcctl messages -chat wxid_example -limit 100 -json
 Your data stays on your Mac. Once setup is complete, all contact, chatroom,
 session, and message commands are read-only and can run while WeChat is open.
 
+> **License notice:** [Schedule A](LICENSE) permits licensed use only for
+> interoperability solely for computational data analysis, only with lawfully
+> accessed data, and only while physically outside the United States, Mainland
+> China, and Hong Kong, and it also restricts distribution and secondary
+> licensing.
+
 ## What can I do with it?
 
 - Give a local AI agent relevant WeChat context for a task.
