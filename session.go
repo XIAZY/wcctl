@@ -50,37 +50,19 @@ type sessionIdentity struct {
 
 func cmdSession(args []string) {
 	if err := runSession(args, os.Stdout); err != nil {
-		fatal("session: %v", err)
+		fatal("sessions: %v", err)
 	}
 }
 
 func runSession(args []string, output io.Writer) error {
-	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
-		sessionUsage(output)
-		return nil
-	}
-	if args[0] != "ls" {
-		return fmt.Errorf("unknown subcommand %q; run 'wcctl session' for usage", args[0])
-	}
-	return runSessionList(args[1:], output)
-}
-
-func sessionUsage(output io.Writer) {
-	fmt.Fprintln(output, `usage: wcctl session <subcommand>
-
-subcommands:
-  ls  list recent conversation sessions`)
-}
-
-func runSessionList(args []string, output io.Writer) error {
 	defaultKeys, err := defaultKeyStorePath()
 	if err != nil {
 		return fmt.Errorf("resolve key store: %w", err)
 	}
-	fs := flag.NewFlagSet("session ls", flag.ContinueOnError)
+	fs := flag.NewFlagSet("sessions", flag.ContinueOnError)
 	fs.SetOutput(output)
 	fs.Usage = func() {
-		fmt.Fprintln(output, "usage: wcctl session ls [-limit N] [-user USER] [-json] [-keys PATH]")
+		fmt.Fprintln(output, "usage: wcctl sessions [-limit N] [-user USER] [-json] [-keys PATH]")
 		fs.PrintDefaults()
 	}
 	limit := fs.Int("limit", 50, "maximum number of sessions")

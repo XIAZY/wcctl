@@ -9,10 +9,10 @@ can be printed as a table for people or as JSON for other programs.
 
 ```bash
 # See your recent conversations.
-./wcctl session ls
+./wcctl sessions
 
 # Get message history as structured data.
-./wcctl message ls -chat wxid_example -limit 100 -json
+./wcctl messages -chat wxid_example -limit 100 -json
 ```
 
 Your data stays on your Mac. Once setup is complete, all contact, chatroom,
@@ -91,26 +91,26 @@ Restart WeChat when you are ready. Re-enable SIP from macOS Recovery with
 List people in your contacts:
 
 ```bash
-./wcctl contact ls
+./wcctl contacts
 ```
 
 List group chats:
 
 ```bash
-./wcctl chatroom ls
+./wcctl chatrooms
 ```
 
 See conversations ordered by recent activity:
 
 ```bash
-./wcctl session ls
+./wcctl sessions
 ```
 
 Copy a username from one of those commands and use it to read messages:
 
 ```bash
-./wcctl message ls -chat wxid_example
-./wcctl message ls -chat 123456789@chatroom -limit 100
+./wcctl messages -chat wxid_example
+./wcctl messages -chat 123456789@chatroom -limit 100
 ```
 
 That is everything needed for normal use.
@@ -120,25 +120,25 @@ That is everything needed for normal use.
 Add `-json` to any listing command:
 
 ```bash
-./wcctl contact ls -json
-./wcctl chatroom ls -json
-./wcctl session ls -limit 100 -json
-./wcctl message ls -chat wxid_example -limit 200 -json
+./wcctl contacts -json
+./wcctl chatrooms -json
+./wcctl sessions -limit 100 -json
+./wcctl messages -chat wxid_example -limit 200 -json
 ```
 
 Any local tool that can run a command and parse JSON can use `wcctl`. A
 typical workflow is:
 
-1. Run `session ls -json` to discover recent conversations.
+1. Run `sessions -json` to discover recent conversations.
 2. Select a session by its `username`.
-3. Run `message ls -chat USERNAME -json` to retrieve the relevant history.
+3. Run `messages -chat USERNAME -json` to retrieve the relevant history.
 4. Pass only that result to the agent or analysis step that needs it.
 
 It also works in ordinary shell pipelines:
 
 ```bash
-./wcctl session ls -limit 5 -json | jq -r '.[].username'
-./wcctl message ls -chat wxid_example -json > messages.json
+./wcctl sessions -limit 5 -json | jq -r '.[].username'
+./wcctl messages -chat wxid_example -json > messages.json
 ```
 
 `wcctl` does not upload this data. The tool you connect it to decides what
@@ -149,7 +149,7 @@ happens to the JSON afterward.
 ### Contacts
 
 ```bash
-./wcctl contact ls [-user USER] [-json]
+./wcctl contacts [-user USER] [-json]
 ```
 
 Lists regular contacts and their available profile metadata. Chatrooms,
@@ -159,7 +159,7 @@ included.
 ### Chatrooms
 
 ```bash
-./wcctl chatroom ls [-user USER] [-json]
+./wcctl chatrooms [-user USER] [-json]
 ```
 
 Lists group chats with available details such as their names, owners, member
@@ -168,7 +168,7 @@ counts, and announcements.
 ### Sessions
 
 ```bash
-./wcctl session ls [-limit N] [-user USER] [-json]
+./wcctl sessions [-limit N] [-user USER] [-json]
 ```
 
 Lists recent conversations, including their usernames, display names, unread
@@ -177,7 +177,7 @@ state, last activity, and summaries when available. The default limit is 50.
 ### Messages
 
 ```bash
-./wcctl message ls -chat USERNAME \
+./wcctl messages -chat USERNAME \
   [-limit N] [-before TIME] [-user USER] [-json]
 ```
 
@@ -189,7 +189,7 @@ To retrieve older messages, pass the time of the oldest result back through
 `-before`. It accepts a Unix timestamp or RFC3339 time:
 
 ```bash
-./wcctl message ls -chat wxid_example -limit 100 \
+./wcctl messages -chat wxid_example -limit 100 \
   -before 2026-08-01T00:00:00Z -json
 ```
 
@@ -211,7 +211,7 @@ choose a default:
 Use `-user ACCOUNT` when you want to switch for just one command:
 
 ```bash
-./wcctl message ls -user ACCOUNT -chat wxid_example -json
+./wcctl messages -user ACCOUNT -chat wxid_example -json
 ```
 
 With only one account, no selection is necessary.

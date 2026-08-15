@@ -6,13 +6,13 @@ import (
 	"testing"
 )
 
-func TestRunChatRoomWithoutSubcommandPrintsUsage(t *testing.T) {
+func TestRunChatRoomHelp(t *testing.T) {
 	var output bytes.Buffer
-	if err := runChatRoom(nil, &output); err != nil {
+	if err := runChatRoom([]string{"-h"}, &output); err != nil {
 		t.Fatal(err)
 	}
 	got := output.String()
-	if !strings.Contains(got, "wcctl chatroom <subcommand>") || !strings.Contains(got, "ls  list chatrooms") {
+	if !strings.Contains(got, "wcctl chatrooms [-user USER] [-json] [-keys PATH]") {
 		t.Fatalf("unexpected chatroom usage:\n%s", got)
 	}
 }

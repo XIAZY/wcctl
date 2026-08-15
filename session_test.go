@@ -6,13 +6,13 @@ import (
 	"testing"
 )
 
-func TestRunSessionWithoutSubcommandPrintsUsage(t *testing.T) {
+func TestRunSessionHelp(t *testing.T) {
 	var output bytes.Buffer
-	if err := runSession(nil, &output); err != nil {
+	if err := runSession([]string{"-h"}, &output); err != nil {
 		t.Fatal(err)
 	}
 	got := output.String()
-	if !strings.Contains(got, "wcctl session <subcommand>") || !strings.Contains(got, "ls  list recent") {
+	if !strings.Contains(got, "wcctl sessions [-limit N] [-user USER] [-json] [-keys PATH]") {
 		t.Fatalf("unexpected session usage:\n%s", got)
 	}
 }

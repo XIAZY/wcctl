@@ -48,7 +48,7 @@ func TestRunContactListJSON(t *testing.T) {
 	t.Cleanup(func() { querySQLCipher = originalQuery })
 
 	var output bytes.Buffer
-	if err := runContact([]string{"ls", "-keys", keyPath, "-json"}, &output); err != nil {
+	if err := runContact([]string{"-keys", keyPath, "-json"}, &output); err != nil {
 		t.Fatal(err)
 	}
 	var contacts []contactRecord
@@ -60,14 +60,32 @@ func TestRunContactListJSON(t *testing.T) {
 	}
 }
 
-func TestRunContactWithoutSubcommandPrintsUsage(t *testing.T) {
+func TestRunContactHelp(t *testing.T) {
 	var output bytes.Buffer
-	if err := runContact(nil, &output); err != nil {
+	if err := runContact([]string{"-h"}, &output); err != nil {
 		t.Fatal(err)
 	}
 	got := output.String()
-	if !strings.Contains(got, "wcctl contact <subcommand>") || !strings.Contains(got, "ls  list regular contacts") {
+	if !strings.Contains(got, "wcctl contacts [-user USER] [-json] [-keys PATH]") {
 		t.Fatalf("unexpected contact usage:\n%s", got)
+	}
+}
+
+func TestResourceCommandsRejectLegacyListSubcommand(t *testing.T) {
+	commands := map[string]func([]string, *bytes.Buffer) error{
+		"contacts":  func(args []string, output *bytes.Buffer) error { return runContact(args, output) },
+		"chatrooms": func(args []string, output *bytes.Buffer) error { return runChatRoom(args, output) },
+		"sessions":  func(args []string, output *bytes.Buffer) error { return runSession(args, output) },
+		"messages":  func(args []string, output *bytes.Buffer) error { return runMessage(args, output) },
+	}
+	for name, run := range commands {
+		t.Run(name, func(t *testing.T) {
+			var output bytes.Buffer
+			err := run([]string{"ls"}, &output)
+			if err == nil || !strings.Contains(err.Error(), `unexpected argument "ls"`) {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
 	}
 }
 

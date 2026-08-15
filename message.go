@@ -60,37 +60,19 @@ type messageIdentity struct {
 
 func cmdMessage(args []string) {
 	if err := runMessage(args, os.Stdout); err != nil {
-		fatal("message: %v", err)
+		fatal("messages: %v", err)
 	}
 }
 
 func runMessage(args []string, output io.Writer) error {
-	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
-		messageUsage(output)
-		return nil
-	}
-	if args[0] != "ls" {
-		return fmt.Errorf("unknown subcommand %q; run 'wcctl message' for usage", args[0])
-	}
-	return runMessageList(args[1:], output)
-}
-
-func messageUsage(output io.Writer) {
-	fmt.Fprintln(output, `usage: wcctl message <subcommand>
-
-subcommands:
-  ls  list messages for a contact or chatroom`)
-}
-
-func runMessageList(args []string, output io.Writer) error {
 	defaultKeys, err := defaultKeyStorePath()
 	if err != nil {
 		return fmt.Errorf("resolve key store: %w", err)
 	}
-	fs := flag.NewFlagSet("message ls", flag.ContinueOnError)
+	fs := flag.NewFlagSet("messages", flag.ContinueOnError)
 	fs.SetOutput(output)
 	fs.Usage = func() {
-		fmt.Fprintln(output, "usage: wcctl message ls -chat USERNAME [-limit N] [-before TIME] [-user USER] [-json] [-keys PATH]")
+		fmt.Fprintln(output, "usage: wcctl messages -chat USERNAME [-limit N] [-before TIME] [-user USER] [-json] [-keys PATH]")
 		fs.PrintDefaults()
 	}
 	chat := fs.String("chat", "", "contact or chatroom username")

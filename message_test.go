@@ -10,13 +10,13 @@ import (
 	"github.com/klauspost/compress/zstd"
 )
 
-func TestRunMessageWithoutSubcommandPrintsUsage(t *testing.T) {
+func TestRunMessageHelp(t *testing.T) {
 	var output bytes.Buffer
-	if err := runMessage(nil, &output); err != nil {
+	if err := runMessage([]string{"-h"}, &output); err != nil {
 		t.Fatal(err)
 	}
 	got := output.String()
-	if !strings.Contains(got, "wcctl message <subcommand>") || !strings.Contains(got, "ls  list messages") {
+	if !strings.Contains(got, "wcctl messages -chat USERNAME [-limit N] [-before TIME] [-user USER] [-json] [-keys PATH]") {
 		t.Fatalf("unexpected message usage:\n%s", got)
 	}
 }

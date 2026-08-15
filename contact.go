@@ -41,37 +41,19 @@ type contactRecord struct {
 
 func cmdContact(args []string) {
 	if err := runContact(args, os.Stdout); err != nil {
-		fatal("contact: %v", err)
+		fatal("contacts: %v", err)
 	}
 }
 
 func runContact(args []string, output io.Writer) error {
-	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
-		contactUsage(output)
-		return nil
-	}
-	if args[0] != "ls" {
-		return fmt.Errorf("unknown subcommand %q; run 'wcctl contact' for usage", args[0])
-	}
-	return runContactList(args[1:], output)
-}
-
-func contactUsage(output io.Writer) {
-	fmt.Fprintln(output, `usage: wcctl contact <subcommand>
-
-subcommands:
-  ls  list regular contacts and their metadata`)
-}
-
-func runContactList(args []string, output io.Writer) error {
 	defaultKeys, err := defaultKeyStorePath()
 	if err != nil {
 		return fmt.Errorf("resolve key store: %w", err)
 	}
-	fs := flag.NewFlagSet("contact ls", flag.ContinueOnError)
+	fs := flag.NewFlagSet("contacts", flag.ContinueOnError)
 	fs.SetOutput(output)
 	fs.Usage = func() {
-		fmt.Fprintln(output, "usage: wcctl contact ls [-user USER] [-json] [-keys PATH]")
+		fmt.Fprintln(output, "usage: wcctl contacts [-user USER] [-json] [-keys PATH]")
 		fs.PrintDefaults()
 	}
 	userName := fs.String("user", "", "WeChat user in the key store")

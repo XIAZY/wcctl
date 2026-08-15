@@ -37,37 +37,19 @@ type chatRoomRecord struct {
 
 func cmdChatRoom(args []string) {
 	if err := runChatRoom(args, os.Stdout); err != nil {
-		fatal("chatroom: %v", err)
+		fatal("chatrooms: %v", err)
 	}
 }
 
 func runChatRoom(args []string, output io.Writer) error {
-	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
-		chatRoomUsage(output)
-		return nil
-	}
-	if args[0] != "ls" {
-		return fmt.Errorf("unknown subcommand %q; run 'wcctl chatroom' for usage", args[0])
-	}
-	return runChatRoomList(args[1:], output)
-}
-
-func chatRoomUsage(output io.Writer) {
-	fmt.Fprintln(output, `usage: wcctl chatroom <subcommand>
-
-subcommands:
-  ls  list chatrooms and their metadata`)
-}
-
-func runChatRoomList(args []string, output io.Writer) error {
 	defaultKeys, err := defaultKeyStorePath()
 	if err != nil {
 		return fmt.Errorf("resolve key store: %w", err)
 	}
-	fs := flag.NewFlagSet("chatroom ls", flag.ContinueOnError)
+	fs := flag.NewFlagSet("chatrooms", flag.ContinueOnError)
 	fs.SetOutput(output)
 	fs.Usage = func() {
-		fmt.Fprintln(output, "usage: wcctl chatroom ls [-user USER] [-json] [-keys PATH]")
+		fmt.Fprintln(output, "usage: wcctl chatrooms [-user USER] [-json] [-keys PATH]")
 		fs.PrintDefaults()
 	}
 	userName := fs.String("user", "", "WeChat user in the key store")

@@ -4,10 +4,10 @@
 //
 //	dump         freeze a process tree, dump the root process's memory, then terminate (dump.go)
 //	key          acquire or extract verified WeChat database keys (key.go, extract.go)
-//	contact      query contacts from a keyed WeChat contact database (contact.go)
-//	chatroom     query chatrooms from a keyed WeChat contact database (chatroom.go)
-//	message      query messages across keyed WeChat message shards (message.go)
-//	session      query recent conversations from a keyed WeChat session database (session.go)
+//	contacts     query contacts from a keyed WeChat contact database (contact.go)
+//	chatrooms    query chatrooms from a keyed WeChat contact database (chatroom.go)
+//	messages     query messages across keyed WeChat message shards (message.go)
+//	sessions     query recent conversations from a keyed WeChat session database (session.go)
 //	user         inspect and select users from the key store (user.go)
 //
 // Layout: main.go handles dispatch and shared helpers; mach.go wraps all cgo/Mach calls.
@@ -39,10 +39,10 @@ func usage() {
 subcommands:
   key          wcctl key acquire | wcctl key extract -capture PATH
   dump         wcctl dump -pid <PID> [-out DIR] [-full] [-shared] [-chunk N] [-meta] [-yes]
-  contact      wcctl contact ls [-user USER] [-json] [-keys PATH]
-  chatroom     wcctl chatroom ls [-user USER] [-json] [-keys PATH]
-  message      wcctl message ls -chat USERNAME [-limit N] [-before TIME] [-user USER] [-json] [-keys PATH]
-  session      wcctl session ls [-limit N] [-user USER] [-json] [-keys PATH]
+  contacts     wcctl contacts [-user USER] [-json] [-keys PATH]
+  chatrooms    wcctl chatrooms [-user USER] [-json] [-keys PATH]
+  messages     wcctl messages -chat USERNAME [-limit N] [-before TIME] [-user USER] [-json] [-keys PATH]
+  sessions     wcctl sessions [-limit N] [-user USER] [-json] [-keys PATH]
   user         wcctl user <ls|current|use|clear>`)
 }
 
@@ -73,13 +73,13 @@ func main() {
 		cmdExtractKey(os.Args[2:])
 	case "__dump-helper":
 		cmdDumpHelper(os.Args[2:])
-	case "contact":
+	case "contacts":
 		cmdContact(os.Args[2:])
-	case "chatroom":
+	case "chatrooms":
 		cmdChatRoom(os.Args[2:])
-	case "message":
+	case "messages":
 		cmdMessage(os.Args[2:])
-	case "session":
+	case "sessions":
 		cmdSession(os.Args[2:])
 	case "user":
 		cmdUser(os.Args[2:])
