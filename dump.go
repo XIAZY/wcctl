@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -59,6 +58,7 @@ func cmdDump(args []string) {
 	metaOnly := fs.Bool("meta", false, "enumerate region metadata only, do not read contents")
 	fullDump := fs.Bool("full", false, "dump all readable regions (default dumps data memory only: writable regions)")
 	incShared := fs.Bool("shared", false, "include dyld shared cache regions (several GB, skipped by default)")
+	yes := fs.Bool("yes", false, "skip the destructive confirmation")
 	fs.Parse(args)
 
 	root := *pidFlag
@@ -71,25 +71,57 @@ func cmdDump(args []string) {
 	if os.Geteuid() != 0 {
 		fatal("dump requires root privileges, run with sudo (current euid=%d)", os.Geteuid())
 	}
+	if *chunkMiB <= 0 {
+		fatal("-chunk must be greater than zero")
+	}
+	if !processExists(root) {
+		fatal("process %d is not running", root)
+	}
+	sip, err := requireSIPDisabled()
+	if err != nil {
+		fatal("SIP preflight: %v", err)
+	}
+	if !*yes {
+		confirmed, err := confirmAcquisition(os.Stdin, os.Stderr, root)
+		if err != nil {
+			fatal("confirmation: %v", err)
+		}
+		if !confirmed {
+			fatal("dump cancelled")
+		}
+	}
 	out := *outFlag
+	if info, err := os.Lstat(out); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		fatal("output directory must not be a symbolic link: %s", out)
+	} else if err != nil && !os.IsNotExist(err) {
+		fatal("inspect output directory: %v", err)
+	}
 	if entries, err := os.ReadDir(out); err == nil && len(entries) > 0 {
 		fatal("output directory %s already exists and is not empty — pass -out with a different directory, or clean it first", out)
 	}
 	segDir := filepath.Join(out, "segments")
-	if err := os.MkdirAll(segDir, 0o755); err != nil {
+	if err := os.MkdirAll(segDir, 0o700); err != nil {
 		fatal("mkdir: %v", err)
+	}
+	if err := os.Chmod(out, 0o700); err != nil {
+		fatal("secure output directory: %v", err)
+	}
+	if err := os.Chmod(segDir, 0o700); err != nil {
+		fatal("secure segments directory: %v", err)
 	}
 	lf, err := os.Create(filepath.Join(out, "audit.log"))
 	if err != nil {
 		fatal("audit.log: %v", err)
 	}
+	if err := lf.Chmod(0o600); err != nil {
+		lf.Close()
+		fatal("secure audit.log: %v", err)
+	}
 	defer lf.Close()
 	logOut = io.MultiWriter(os.Stderr, lf)
 
 	audit("wcctl start: pid=%d out=%s euid=%d", root, out, os.Geteuid())
-	if s, err := exec.Command("csrutil", "status").Output(); err == nil {
-		audit("env: %s", strings.TrimSpace(string(s)))
-	}
+	audit("env: %s", sip)
 
 	// ---- 1. Enumerate and freeze the tree (root first) ----
 	tree := treePreOrder(root)
@@ -126,6 +158,11 @@ func cmdDump(args []string) {
 	if err != nil {
 		killStopped()
 		fatal("regions.jsonl: %v", err)
+	}
+	if err := metaF.Chmod(0o600); err != nil {
+		metaF.Close()
+		killStopped()
+		fatal("secure regions.jsonl: %v", err)
 	}
 	defer metaF.Close()
 	enc := json.NewEncoder(metaF)
@@ -185,6 +222,11 @@ func readRegion(port taskPort, reg *region, out string, buf []byte, m *regionMet
 	f, err := os.Create(filepath.Join(out, fname))
 	if err != nil {
 		m.Errors = append(m.Errors, "create: "+err.Error())
+		return
+	}
+	if err := f.Chmod(0o600); err != nil {
+		m.Errors = append(m.Errors, "chmod: "+err.Error())
+		f.Close()
 		return
 	}
 	defer f.Close()

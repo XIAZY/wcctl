@@ -1,13 +1,15 @@
-// extract.go implements extract-key: locate WeChat v4 AES material in a memory
-// dump, validate it against an account's encrypted databases, and persist only
-// cryptographically verified database/key associations.
+// extract.go implements key extract (and the legacy extract-key alias): locate
+// WeChat v4 AES material in a memory dump, validate it against an account's
+// encrypted databases, and persist only cryptographically verified mappings.
 package main
 
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -23,69 +25,132 @@ type keyCandidate struct {
 }
 
 func cmdExtractKey(args []string) {
-	fs := flag.NewFlagSet("extract-key", flag.ExitOnError)
-	in := fs.String("in", "./dumps", "dump output directory or a single binary file")
-	dataDir := fs.String("data-dir", "", "WeChat account folder or xwechat_files folder (default: macOS WeChat 4.x location)")
-	fs.Parse(args)
+	if err := runKeyExtract(args, os.Stdin, os.Stdout, os.Stderr); err != nil {
+		fatal("extract key: %v", err)
+	}
+}
 
-	files, err := inputFiles(*in)
+func runKeyExtract(args []string, input io.Reader, output, errorOutput io.Writer) error {
+	defaultKeys, err := defaultKeyStorePath()
 	if err != nil {
-		fatal("input: %v", err)
+		return fmt.Errorf("resolve key store: %w", err)
 	}
-	candidates, hits := extractCandidates(files)
-	if len(candidates) == 0 {
-		fatal("no x'<96 hex>' AES candidates found in %s", *in)
+	fs := flag.NewFlagSet("key extract", flag.ContinueOnError)
+	fs.SetOutput(errorOutput)
+	fs.Usage = func() {
+		fmt.Fprintln(errorOutput, "usage: wcctl key extract [-capture PATH] [-data-dir PATH] [-account ACCOUNT] [-keys PATH]")
 	}
-	fmt.Fprintf(os.Stderr, "found %d hit(s), %d unique AES candidate(s)\n", hits, len(candidates))
+	capture := fs.String("capture", "./dumps", "capture directory or a single binary file")
+	legacyInput := fs.String("in", "", "deprecated alias for -capture")
+	dataDir := fs.String("data-dir", "", "WeChat account folder or xwechat_files folder")
+	accountName := fs.String("account", "", "WeChat account to verify")
+	keyStorePath := fs.String("keys", defaultKeys, "path to keys.json")
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
+	}
+	if fs.NArg() != 0 {
+		fs.Usage()
+		return fmt.Errorf("unexpected arguments: %s", strings.Join(fs.Args(), " "))
+	}
+	if *legacyInput != "" {
+		*capture = *legacyInput
+	}
 
-	root := *dataDir
+	account, err := resolveExtractionAccount(*dataDir, *accountName, input, errorOutput)
+	if err != nil {
+		return err
+	}
+	_, err = extractAndSave(*capture, account, *keyStorePath, output, errorOutput)
+	return err
+}
+
+func resolveExtractionAccount(dataDir, accountName string, input io.Reader, output io.Writer) (weChatAccount, error) {
+	root := dataDir
+	var err error
 	if root == "" {
 		root, err = defaultWeChatDataDir()
 		if err != nil {
-			fatal("resolve default WeChat data directory: %v", err)
+			return weChatAccount{}, fmt.Errorf("resolve default WeChat data directory: %w", err)
 		}
 	}
 	accounts, err := discoverAccounts(root)
 	if err != nil {
-		fatal("discover WeChat accounts: %v", err)
+		return weChatAccount{}, fmt.Errorf("discover WeChat accounts: %w", err)
 	}
-	account, err := chooseAccount(accounts, os.Stdin, os.Stderr)
+	if accountName != "" {
+		for _, account := range accounts {
+			if account.Name == accountName {
+				fmt.Fprintf(output, "using WeChat account %s (%s)\n", account.Name, account.Path)
+				return account, nil
+			}
+		}
+		return weChatAccount{}, fmt.Errorf("WeChat account %q not found under %s", accountName, root)
+	}
+	if len(accounts) > 1 {
+		configPath, configPathErr := defaultConfigPath()
+		if configPathErr == nil {
+			config, configErr := readAppConfig(configPath)
+			if configErr != nil {
+				return weChatAccount{}, configErr
+			}
+			for _, account := range accounts {
+				if account.Name == config.DefaultUser {
+					fmt.Fprintf(output, "using configured WeChat account %s (%s)\n", account.Name, account.Path)
+					return account, nil
+				}
+			}
+		}
+	}
+	account, err := chooseAccount(accounts, input, output)
 	if err != nil {
-		fatal("select WeChat account: %v", err)
+		return weChatAccount{}, fmt.Errorf("select WeChat account: %w", err)
 	}
+	return account, nil
+}
+
+func extractAndSave(capture string, account weChatAccount, keyStorePath string, output, errorOutput io.Writer) (int, error) {
+	files, err := inputFiles(capture)
+	if err != nil {
+		return 0, fmt.Errorf("input: %w", err)
+	}
+	candidates, hits := extractCandidates(files, errorOutput)
+	if len(candidates) == 0 {
+		return 0, fmt.Errorf("no x'<96 hex>' AES candidates found in %s", capture)
+	}
+	fmt.Fprintf(errorOutput, "found %d hit(s), %d unique AES candidate(s)\n", hits, len(candidates))
 
 	databases, err := discoverDatabases(account.DatabaseRoot)
 	if err != nil {
-		fatal("discover databases: %v", err)
+		return 0, fmt.Errorf("discover databases: %w", err)
 	}
-	fmt.Fprintf(os.Stderr, "testing %d candidate(s) against %d database(s) for %s\n",
+	fmt.Fprintf(errorOutput, "testing %d candidate(s) against %d database(s) for %s\n",
 		len(candidates), len(databases), account.Name)
 
 	matches := make(map[string]storedDatabase)
 	for _, dbPath := range databases {
 		candidate, ok, err := findDatabaseKey(dbPath, candidates)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "skip %s: %v\n", dbPath, err)
+			fmt.Fprintf(errorOutput, "skip %s: %v\n", dbPath, err)
 			continue
 		}
 		if !ok {
 			continue
 		}
 		matches[dbPath] = newStoredDatabase(account.Name, candidate.AESKey[:])
-		fmt.Printf("matched %s\n", dbPath)
+		fmt.Fprintf(output, "matched %s\n", dbPath)
 	}
 	if len(matches) == 0 {
-		fatal("none of the extracted AES candidates matched databases under %s", account.DatabaseRoot)
+		return 0, fmt.Errorf("none of the extracted AES candidates matched databases under %s", account.DatabaseRoot)
 	}
 
-	storePath, err := defaultKeyStorePath()
-	if err != nil {
-		fatal("resolve key store: %v", err)
+	if err := saveDatabaseKeys(keyStorePath, matches); err != nil {
+		return 0, fmt.Errorf("save verified keys: %w", err)
 	}
-	if err := saveDatabaseKeys(storePath, matches); err != nil {
-		fatal("save verified keys: %v", err)
-	}
-	fmt.Fprintf(os.Stderr, "saved %d verified database key(s) to %s\n", len(matches), storePath)
+	fmt.Fprintf(errorOutput, "saved %d verified database key(s) to %s\n", len(matches), keyStorePath)
+	return len(matches), nil
 }
 
 func inputFiles(path string) ([]string, error) {
@@ -119,14 +184,14 @@ func inputFiles(path string) ([]string, error) {
 	return files, nil
 }
 
-func extractCandidates(files []string) ([]keyCandidate, int) {
+func extractCandidates(files []string, warningOutput io.Writer) ([]keyCandidate, int) {
 	seen := make(map[[32]byte]bool)
 	var candidates []keyCandidate
 	hits := 0
 	for _, path := range files {
 		found, err := scanFile(path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "skip %s: %v\n", path, err)
+			fmt.Fprintf(warningOutput, "skip %s: %v\n", path, err)
 			continue
 		}
 		hits += len(found)

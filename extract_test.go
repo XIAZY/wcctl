@@ -17,7 +17,7 @@ func TestScanFileExtractsAndDeduplicatesCandidates(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	candidates, hits := extractCandidates([]string{path})
+	candidates, hits := extractCandidates([]string{path}, &bytes.Buffer{})
 	if hits != 2 {
 		t.Fatalf("hits = %d, want 2", hits)
 	}

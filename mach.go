@@ -88,6 +88,14 @@ static int wc_childpids(int pid, int *buf, int n) {
 static int wc_pname(int pid, char *buf, int n) {
     return proc_name((pid_t)pid, buf, (uint32_t)n);
 }
+
+static int wc_allpids(int *buf, int n) {
+    return proc_listallpids((void *)buf, n * (int)sizeof(int));
+}
+
+static int wc_pidpath(int pid, char *buf, int n) {
+    return proc_pidpath((pid_t)pid, (void *)buf, (uint32_t)n);
+}
 */
 import "C"
 
@@ -179,6 +187,32 @@ func procName(pid int) string {
 	buf := make([]C.char, 256)
 	if C.wc_pname(C.int(pid), &buf[0], 256) <= 0 {
 		return "?"
+	}
+	return C.GoString(&buf[0])
+}
+
+func allPIDs() []int {
+	buf := make([]C.int, 16384)
+	n := int(C.wc_allpids(&buf[0], C.int(len(buf))))
+	if n <= 0 {
+		return nil
+	}
+	if n > len(buf) {
+		n = len(buf)
+	}
+	result := make([]int, 0, n)
+	for index := 0; index < n; index++ {
+		if buf[index] > 0 {
+			result = append(result, int(buf[index]))
+		}
+	}
+	return result
+}
+
+func procPath(pid int) string {
+	buf := make([]C.char, 4096)
+	if C.wc_pidpath(C.int(pid), &buf[0], C.int(len(buf))) <= 0 {
+		return ""
 	}
 	return C.GoString(&buf[0])
 }

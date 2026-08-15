@@ -3,8 +3,9 @@
 `wcctl` is a macOS command-line tool for acquiring process memory and
 identifying the final AES-256 keys used by WeChat 4.x encrypted databases.
 
-> `dump` freezes and terminates the selected process tree. Read its help and
-> use it only on processes and data you are authorized to inspect.
+> `key acquire` and `dump` freeze and terminate the selected process tree.
+> Read their help and use them only on processes and data you are authorized
+> to inspect.
 
 ## Build
 
@@ -52,17 +53,31 @@ Selection precedence is: explicit `-user`, configured default, then the sole
 user in `keys.json`. A missing configured user produces an error rather than
 silently switching identities.
 
-Capture writable process memory:
+Acquire and verify WeChat database keys with the guided workflow:
+
+```bash
+./wcctl key acquire
+```
+
+Run this command as the regular desktop user, not through `sudo`. It verifies
+that SIP is disabled, finds the main running WeChat process, discovers the
+account database directory, explains that WeChat will be terminated, and asks
+for confirmation. Only the capture helper is elevated through `/usr/bin/sudo`.
+After successful extraction, its private temporary memory capture is deleted.
+Use `-keep-dump` or provide `-out DIR` to retain it; captures are retained after
+failures so extraction can be retried.
+
+For a manual two-step workflow, capture a specific process and then extract
+from the resulting directory:
 
 ```bash
 sudo ./wcctl dump -pid <PID> -out ./dumps
+./wcctl key extract -capture ./dumps
 ```
 
-Extract and validate database AES keys:
-
-```bash
-./wcctl extract-key -in ./dumps
-```
+The low-level `dump` command requires root, disabled SIP, a live PID, and an
+explicit destructive confirmation. `extract-key` remains as a deprecated alias
+for `key extract`.
 
 List contacts using the mappings in `~/.wcctl/keys.json`:
 
@@ -110,7 +125,7 @@ the resolved contact or room name, canonical username, unread count, hidden
 state, last sender, and summary. JSON includes drafts, unread bookkeeping,
 message-type fields, timestamps, and no-contact fallback titles.
 
-By default, `extract-key` discovers account folders under:
+By default, `key acquire` and `key extract` discover account folders under:
 
 ```text
 ~/Library/Containers/com.tencent.xinWeChat/Data/Documents/xwechat_files
@@ -121,7 +136,7 @@ prompts for the account to test. Override discovery with either an account
 folder, its `db_storage` folder, or a folder containing copied `.db` files:
 
 ```bash
-./wcctl extract-key -in ./dumps -data-dir /path/to/folder
+./wcctl key extract -capture ./dumps -data-dir /path/to/folder
 ```
 
 Each extracted 48-byte record is interpreted as a 32-byte final AES key plus a
