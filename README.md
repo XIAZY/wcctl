@@ -77,7 +77,11 @@ sudo ./wcctl dump -pid <PID> -out ./dumps
 
 The low-level `dump` command requires root, disabled SIP, a live PID, and an
 explicit destructive confirmation. `extract-key` remains as a deprecated alias
-for `key extract`.
+for `key extract`. If any process in the discovered tree cannot be stopped,
+capture aborts before acquiring the task port or reading memory; processes that
+were already stopped are killed rather than resumed. Once dumping begins, any
+region-enumeration, memory-read, segment-write, metadata-write, or flush error
+also aborts the capture and retains the partial output for diagnosis.
 
 List contacts using the mappings in `~/.wcctl/keys.json`:
 

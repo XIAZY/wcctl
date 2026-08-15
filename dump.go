@@ -16,6 +16,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -126,15 +127,7 @@ func cmdDump(args []string) {
 	// ---- 1. Enumerate and freeze the tree (root first) ----
 	tree := treePreOrder(root)
 	audit("tree: %d process(es)", len(tree))
-	stopped := []int{}
-	for _, p := range tree {
-		if err := syscall.Kill(p, syscall.SIGSTOP); err != nil {
-			audit("SIGSTOP %-6d (%s): FAIL %v", p, procName(p), err)
-		} else {
-			audit("SIGSTOP %-6d (%s): ok", p, procName(p))
-			stopped = append(stopped, p)
-		}
-	}
+	stopped, freezeErr := freezeProcessTree(tree, syscall.Kill)
 	// Failure path kills as well: no resume, since SIGCONT is the only
 	// perception-producing action in the chain.
 	killStopped := func() {
@@ -142,6 +135,10 @@ func cmdDump(args []string) {
 			syscall.Kill(stopped[i], syscall.SIGKILL)
 		}
 		audit("killed all frozen processes (failure path: killed, not resumed)")
+	}
+	if freezeErr != nil {
+		killStopped()
+		fatal("freeze process tree: %v; capture aborted before any memory was read", freezeErr)
 	}
 
 	// ---- 2. Acquire the task port ----
@@ -172,8 +169,12 @@ func cmdDump(args []string) {
 	var regions, skipped int
 	for cursor := uint64(0); ; {
 		reg, err := nextRegion(port, root, cursor)
+		if errors.Is(err, errAddressSpaceEnd) {
+			break
+		}
 		if err != nil {
-			break // end of the address space
+			killStopped()
+			fatal("enumerate memory regions at 0x%x: %v; partial capture retained", cursor, err)
 		}
 		regions++
 		m := regionMeta{
@@ -189,13 +190,29 @@ func cmdDump(args []string) {
 		readable := !*metaOnly && reg.ProtMask != 0 && reg.Size > 0 &&
 			(*incShared || !isCache) && (*fullDump || reg.Writable())
 		if readable {
-			readRegion(port, reg, out, buf, &m)
+			if err := readRegion(port, reg, out, buf, &m); err != nil {
+				m.Errors = append(m.Errors, err.Error())
+				_ = enc.Encode(m)
+				killStopped()
+				fatal("dump region 0x%x-0x%x: %v; partial capture retained", reg.Start, reg.Start+reg.Size, err)
+			}
 			total += m.Bytes
 		} else {
 			skipped++
 		}
-		enc.Encode(m) // stream one JSON line per region as we go
+		if err := enc.Encode(m); err != nil {
+			killStopped()
+			fatal("write region metadata: %v; partial capture retained", err)
+		}
 		cursor = reg.Start + reg.Size
+	}
+	if err := metaF.Sync(); err != nil {
+		killStopped()
+		fatal("flush region metadata: %v; partial capture retained", err)
+	}
+	if err := lf.Sync(); err != nil {
+		killStopped()
+		fatal("flush audit log: %v; partial capture retained", err)
 	}
 	audit("dump: %d regions (%d skipped), %d bytes -> %s", regions, skipped, total, segDir)
 	audit("extmod(after): %s", extmodCounts(port))
@@ -214,22 +231,33 @@ func cmdDump(args []string) {
 	audit("done: %s", out)
 }
 
+func freezeProcessTree(tree []int, signal func(int, syscall.Signal) error) ([]int, error) {
+	stopped := make([]int, 0, len(tree))
+	for _, pid := range tree {
+		name := procName(pid)
+		if err := signal(pid, syscall.SIGSTOP); err != nil {
+			audit("SIGSTOP %-6d (%s): FAIL %v", pid, name, err)
+			return stopped, fmt.Errorf("SIGSTOP %d (%s): %w", pid, name, err)
+		}
+		audit("SIGSTOP %-6d (%s): ok", pid, name)
+		stopped = append(stopped, pid)
+	}
+	return stopped, nil
+}
+
 // readRegion reads one region in chunks into segments/<start>.bin and back-fills
-// the metadata. Chunking caps peak memory at one chunk regardless of target size,
-// and isolates read failures to a single chunk instead of losing the whole region.
-func readRegion(port taskPort, reg *region, out string, buf []byte, m *regionMeta) {
+// the metadata. Chunking caps peak memory at one chunk regardless of target
+// size. Any read or write failure aborts the entire capture.
+func readRegion(port taskPort, reg *region, out string, buf []byte, m *regionMeta) error {
 	fname := fmt.Sprintf("segments/%x.bin", reg.Start)
 	f, err := os.Create(filepath.Join(out, fname))
 	if err != nil {
-		m.Errors = append(m.Errors, "create: "+err.Error())
-		return
+		return fmt.Errorf("create segment: %w", err)
 	}
 	if err := f.Chmod(0o600); err != nil {
-		m.Errors = append(m.Errors, "chmod: "+err.Error())
-		f.Close()
-		return
+		_ = f.Close()
+		return fmt.Errorf("secure segment: %w", err)
 	}
-	defer f.Close()
 	h := sha256.New()
 	for off := uint64(0); off < reg.Size; off += uint64(len(buf)) {
 		want := buf
@@ -238,13 +266,29 @@ func readRegion(port taskPort, reg *region, out string, buf []byte, m *regionMet
 		}
 		n, err := readChunk(port, reg.Start+off, want)
 		if err != nil {
-			m.Errors = append(m.Errors, fmt.Sprintf("off=0x%x %v", off, err))
-			continue
+			_ = f.Close()
+			return fmt.Errorf("read memory at offset 0x%x: %w", off, err)
 		}
-		f.Write(want[:n])
+		written, err := f.Write(want[:n])
+		if err != nil {
+			_ = f.Close()
+			return fmt.Errorf("write segment at offset 0x%x: %w", off, err)
+		}
+		if written != n {
+			_ = f.Close()
+			return fmt.Errorf("write segment at offset 0x%x: %w", off, io.ErrShortWrite)
+		}
 		h.Write(want[:n])
 		m.Bytes += int64(n)
 	}
+	if err := f.Sync(); err != nil {
+		_ = f.Close()
+		return fmt.Errorf("flush segment: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("close segment: %w", err)
+	}
 	m.File = fname
 	m.SHA256 = hex.EncodeToString(h.Sum(nil))
+	return nil
 }

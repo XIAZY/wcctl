@@ -100,9 +100,12 @@ static int wc_pidpath(int pid, char *buf, int n) {
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"unsafe"
 )
+
+var errAddressSpaceEnd = errors.New("end of process address space")
 
 // taskPort is an alias of C.mach_port_t so main.go can hold a task port
 // without importing "C".
@@ -136,6 +139,9 @@ func acquireTask(pid int) (taskPort, error) {
 func nextRegion(port taskPort, pid int, cursor uint64) (*region, error) {
 	var r C.region_t
 	kr := C.wc_next_region(port, C.int(pid), C.uint64_t(cursor), &r)
+	if kr == C.KERN_INVALID_ADDRESS {
+		return nil, errAddressSpaceEnd
+	}
 	if kr != C.KERN_SUCCESS {
 		return nil, fmt.Errorf("kr=%d", int(kr))
 	}
