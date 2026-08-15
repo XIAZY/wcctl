@@ -31,7 +31,7 @@ Docker caches that layer for later builds.
 
 ## Publish a release
 
-After the secrets are configured, create and push a version tag:
+Create and push a version tag:
 
 ```bash
 git tag v0.0.1
