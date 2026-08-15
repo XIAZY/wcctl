@@ -18,3 +18,7 @@
 *.test
 *.prof
 /coverage.out
+
+# Local cross-compilation inputs and outputs. The Apple SDK is never committed.
+/.osxcross/
+/dist/

@@ -1,0 +1,10 @@
+.git
+.github
+.osxcross/*
+!.osxcross/MacOSX15.2.sdk.tar.xz
+captures
+dumps
+dist
+wcctl
+wcctl-*
+WECHAT_SCHEMA.local.md

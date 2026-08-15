@@ -1,0 +1,78 @@
+# syntax=docker/dockerfile:1.7
+
+FROM golang:1.25-trixie@sha256:bf7af54b660d7fc58068213bea0da7ec65dbf6437d77ddff2bb52e3f530b6a10 AS toolchain
+
+ARG OSXCROSS_COMMIT=27d21e4977c9751d01199c7a226a6faf494c3dd9
+ARG MACOSX_DEPLOYMENT_TARGET=12.0
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        bash \
+        bzip2 \
+        ca-certificates \
+        clang \
+        cpio \
+        file \
+        git \
+        gzip \
+        lld \
+        llvm \
+        make \
+        patch \
+        sed \
+        tar \
+        xz-utils \
+    && ln -s "$(find /usr/bin -maxdepth 1 -name 'ld64.lld-*' -print -quit)" \
+        /usr/local/bin/ld64.lld \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/tpoechtrager/osxcross.git /opt/osxcross/source \
+    && git -C /opt/osxcross/source checkout --detach "${OSXCROSS_COMMIT}"
+
+COPY .osxcross/MacOSX15.2.sdk.tar.xz /opt/osxcross/source/tarballs/
+
+RUN cd /opt/osxcross/source \
+    && UNATTENDED=1 \
+       BUILD_FLAVOR=llvm \
+       ENABLE_ARCHS="arm64 x86_64" \
+       OSX_VERSION_MIN="${MACOSX_DEPLOYMENT_TARGET}" \
+       TARGET_DIR=/opt/osxcross/target \
+       ./build.sh
+
+FROM toolchain AS build
+
+ARG TARGETARCH
+ARG MACOSX_DEPLOYMENT_TARGET=12.0
+
+ENV PATH=/opt/osxcross/target/bin:${PATH}
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+
+COPY *.go ./
+COPY internal ./internal
+
+RUN case "${TARGETARCH}" in \
+        amd64) target_prefix=x86_64 ;; \
+        arm64) target_prefix=arm64 ;; \
+        *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && compiler="$(find /opt/osxcross/target/bin -maxdepth 1 \
+        \( -type f -o -type l \) \
+        -name "${target_prefix}-apple-darwin*-clang" -print -quit)" \
+    && test -n "${compiler}" \
+    && CGO_ENABLED=1 \
+       GOOS=darwin \
+       GOARCH="${TARGETARCH}" \
+       CC="${compiler}" \
+       MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET}" \
+       go build -trimpath -o /out/wcctl . \
+    && file /out/wcctl \
+    && case "${TARGETARCH}" in \
+        amd64) file /out/wcctl | grep -q 'Mach-O 64-bit.*x86_64' ;; \
+        arm64) file /out/wcctl | grep -q 'Mach-O 64-bit.*arm64' ;; \
+    esac
+
+FROM scratch AS artifact
+COPY --from=build /out/wcctl /wcctl

@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Download macOS SDK
+        env:
+          MACOS_SDK_URL: ${{ secrets.MACOS_SDK_URL }}
+          MACOS_SDK_SHA256: ${{ secrets.MACOS_SDK_SHA256 }}
+        run: |
+          test -n "${MACOS_SDK_URL}"
+          test -n "${MACOS_SDK_SHA256}"
+          mkdir -p .osxcross
+          curl --fail --location --retry 3 \
+            --output .osxcross/MacOSX15.2.sdk.tar.xz \
+            "${MACOS_SDK_URL}"
+          printf '%s  %s\n' \
+            "${MACOS_SDK_SHA256}" \
+            .osxcross/MacOSX15.2.sdk.tar.xz \
+            | sha256sum --check --strict
+
+      - name: Build release artifacts on Linux
+        run: ./scripts/build-release.sh
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/wcctl-darwin-amd64.tar.gz \
+            dist/wcctl-darwin-arm64.tar.gz \
+            dist/SHA256SUMS \
+            --generate-notes \
+            --title "${GITHUB_REF_NAME}" \
+            --verify-tag
