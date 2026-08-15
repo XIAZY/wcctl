@@ -1,0 +1,133 @@
+DATA INTEROPERABILITY SOURCE LICENSE
+Version 1.0
+
+This License consists of:
+
+(a) the Mozilla Public License Version 2.0 ("MPL 2.0"), which is
+    incorporated into this License by reference; and
+
+(b) Schedule A — Additional Conditions, set out below.
+
+The MPL 2.0 is available at:
+
+https://www.mozilla.org/MPL/2.0/
+
+The incorporated MPL 2.0 text is subject to Schedule A.
+
+In the event of any inconsistency or conflict between the
+incorporated MPL 2.0 text and Schedule A, Schedule A controls.
+
+For purposes of the incorporated MPL 2.0 text, references to
+"this License" mean this Data Interoperability Source License
+Version 1.0, including Schedule A, except where the context
+necessarily refers specifically to the Mozilla Public License
+Version 2.0.
+
+This License as a whole is a modified license derived from the
+Mozilla Public License Version 2.0. It is not the Mozilla Public
+License Version 2.0.
+
+The Mozilla Foundation is not the license steward of this License.
+
+
+================================================================
+SCHEDULE A — ADDITIONAL CONDITIONS
+================================================================
+
+
+1. PERMITTED PURPOSE
+
+The licenses granted under Section 2.1 of the incorporated
+MPL 2.0 may be exercised only for the purpose of achieving
+interoperability with one or more other computer programs solely
+for the purpose of computational data analysis.
+
+
+2. LAWFUL ACCESS
+
+The licenses granted under Section 2.1 may be exercised in
+relation to data, content, accounts, databases, files, records,
+or other material only where the person using the Covered
+Software has lawful access to that material.
+
+Nothing in this License grants any right to access material
+merely because the Covered Software is technically capable of
+accessing it.
+
+
+3. EXCLUDED TERRITORIES
+
+No license under Section 2.1 is granted for any act undertaken
+while the person exercising the licensed right is physically
+located in any of the following territories:
+
+(a) the United States of America, including its territories
+    and possessions;
+
+(b) Mainland China; or
+
+(c) the Hong Kong Special Administrative Region.
+
+For purposes of this License, "Mainland China" does not include
+the Hong Kong Special Administrative Region or the Macao Special
+Administrative Region.
+
+No person may knowingly distribute or make Covered Software
+available to another person for use in an Excluded Territory.
+
+Nationality, citizenship, residence, or place of incorporation
+alone does not determine whether this Section applies.
+
+The exclusion of a territory under this Section is a limitation
+on the scope of the licenses granted under this License and does
+not constitute an admission that the Covered Software, or any
+activity involving the Covered Software, would otherwise be
+unlawful in that territory.
+
+
+4. SECONDARY LICENSES
+
+Notwithstanding anything in the incorporated MPL 2.0 to the
+contrary, all Covered Software governed by this License is deemed
+"Incompatible With Secondary Licenses".
+
+Covered Software may not be distributed under a Secondary
+License in place of, or as an alternative to, this License.
+
+
+5. VERSIONS OF THIS LICENSE
+
+Sections 10.1 and 10.2 of the incorporated MPL 2.0 apply only to
+the Mozilla Public License Version 2.0 and do not authorize the
+Mozilla Foundation or any other person to publish a new version
+of this License.
+
+Covered Software remains governed by the version of this License
+under which it was received unless the applicable copyright
+holder expressly licenses that Covered Software under another
+version or another license.
+
+
+6. INTERPRETATION
+
+Schedule A forms part of this License.
+
+Except as expressly modified by this Schedule, the rights,
+conditions, obligations, definitions, disclaimers, limitations,
+and other provisions of the incorporated MPL 2.0 apply without
+modification.
+
+No additional restriction imposed separately from this License
+may alter the rights granted under this License except as
+permitted by this License or by applicable law.
+
+
+================================================================
+NOTICE FOR SOURCE CODE FILES
+================================================================
+
+This Source Code Form is subject to the terms of the
+Data Interoperability Source License, v. 1.0.
+If a copy of the License was not distributed with this file,
+You may obtain the applicable license terms from the LICENSE
+file distributed with this Source Code Form.

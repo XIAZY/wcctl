@@ -1,0 +1,19 @@
+wcctl includes the following third-party software. These components remain
+under their own terms and are not relicensed under wcctl's LICENSE.
+
+SQLCipher 4.16.0
+----------------
+Source: https://github.com/sqlcipher/sqlcipher
+Pinned commit: e2a6040f2ae5cfff2b3e08eb3320007d93cdf3fc
+Copyright (c) 2025, ZETETIC LLC. All rights reserved.
+License: internal/sqlcipher/LICENSE.md
+
+The vendored SQLCipher amalgamation also incorporates SQLite. The SQLite code
+is dedicated to the public domain. See internal/sqlcipher/SQLITE_LICENSE.md.
+
+klauspost/compress 1.19.2
+-------------------------
+Source: https://github.com/klauspost/compress
+Copyright (c) 2012 The Go Authors. All rights reserved.
+Copyright (c) 2019 Klaus Post. All rights reserved.
+License: third_party/klauspost-compress-LICENSE

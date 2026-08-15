@@ -1,0 +1,20 @@
+# Local schema notes and user state.
+/WECHAT_SCHEMA.local.md
+/.wcctl/
+/keys.json
+/config.json
+
+# Sensitive memory captures.
+/dumps/
+/captures/
+**/segments/*.bin
+**/audit.log
+**/regions.jsonl
+
+# Compiled and diagnostic artifacts.
+/wcctl
+/wcctl-*
+*.dSYM/
+*.test
+*.prof
+/coverage.out
