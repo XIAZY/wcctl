@@ -41,6 +41,43 @@ func TestRunKeyExtractFromCapture(t *testing.T) {
 	if !strings.Contains(errors.String(), "saved 1 verified database key") {
 		t.Fatalf("unexpected status output:\n%s", errors.String())
 	}
+	if strings.Contains(errors.String(), "mask-free salt fallback") {
+		t.Fatalf("plaintext extraction unexpectedly used the fallback:\n%s", errors.String())
+	}
+	assertFixtureKeySaved(t, keyPath)
+}
+
+func TestRunKeyExtractFallsBackToMaskedRecord(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("HOME", root)
+	accountPath, capturePath, keyPath := createExtractionFixture(t, root)
+	databasePath := filepath.Join(accountPath, "db_storage", "message", "message_0.db")
+	page, err := os.ReadFile(databasePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := bytes.Repeat([]byte{0x42}, 32)
+	masked := testMaskedKeyRecord(key, page[:16])
+	data := append([]byte("noise"), masked...)
+	data = append(data, []byte("trailing")...)
+	if err := os.WriteFile(filepath.Join(capturePath, "segments", "sample.bin"), data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var output, errors bytes.Buffer
+	err = runKey([]string{
+		"extract",
+		"-capture", capturePath,
+		"-data-dir", accountPath,
+		"-keys", keyPath,
+	}, strings.NewReader(""), &output, &errors)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(errors.String(), "no plaintext x'<96 hex>' AES candidates found") ||
+		!strings.Contains(errors.String(), "trying mask-free salt fallback") {
+		t.Fatalf("masked extraction did not report the fallback:\n%s", errors.String())
+	}
 	assertFixtureKeySaved(t, keyPath)
 }
 
