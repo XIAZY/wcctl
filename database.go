@@ -8,17 +8,13 @@ import (
 )
 
 func queryDatabaseJSON(path string, aesKey []byte, statement string, destination any) error {
-	return queryDatabaseJSONTarget(path, aesKey, statement, destination, false)
-}
-
-func queryDatabaseJSONImmutable(path string, aesKey []byte, statement string, destination any) error {
-	return queryDatabaseJSONTarget(path, aesKey, statement, destination, true)
+	return queryDatabaseJSONTarget(path, aesKey, statement, destination)
 }
 
 var querySQLCipher = sqlcipher.Query
 
-func queryDatabaseJSONTarget(path string, aesKey []byte, statement string, destination any, immutable bool) error {
-	rows, err := querySQLCipher(path, aesKey, statement, immutable)
+func queryDatabaseJSONTarget(path string, aesKey []byte, statement string, destination any) error {
+	rows, err := querySQLCipher(path, aesKey, statement)
 	if err != nil {
 		return fmt.Errorf("query database: %w", err)
 	}

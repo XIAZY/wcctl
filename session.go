@@ -113,7 +113,7 @@ func listSessions(user storedUser, limit int) ([]sessionRecord, error) {
 	}
 	statement := fmt.Sprintf(sessionSelect, limit)
 	sessions := make([]sessionRecord, 0)
-	if err := queryDatabaseJSONImmutable(path, aesKey, statement, &sessions); err != nil {
+	if err := queryDatabaseJSON(path, aesKey, statement, &sessions); err != nil {
 		return nil, fmt.Errorf("query session database: %w", err)
 	}
 	resolveSessionDisplayNames(user, sessions)

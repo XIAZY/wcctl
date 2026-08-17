@@ -310,8 +310,14 @@ option list.
 
 - Use `wcctl` only with accounts and data you are authorized to access and
   only as permitted by the [license](LICENSE).
-- Contact, chatroom, session, and message queries do not modify WeChat's
-  database records. Multiple readers are supported.
+- Contact, chatroom, session, and message queries never open WeChat's live
+  SQLite databases. Each query uses private, disposable APFS copy-on-write
+  clones of the database and WAL, and rebuilds SHM only beside those clones.
+  A regular private copy is used when APFS cloning is unavailable.
+- The database and WAL are cloned individually. A query made while WeChat is
+  actively committing or checkpointing may therefore be slightly stale or,
+  rarely, fail because the two files came from different instants. Retrying
+  the command obtains a fresh copy.
 - `~/.wcctl/keys.json` contains sensitive database keys. Do not share it.
 - A retained memory capture may contain messages, credentials, and other
   private data. Delete it when it is no longer needed.

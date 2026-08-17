@@ -35,7 +35,7 @@ func TestRunContactListJSON(t *testing.T) {
 	}
 
 	originalQuery := querySQLCipher
-	querySQLCipher = func(path string, aesKey []byte, statement string, immutable bool) ([]map[string]any, error) {
+	querySQLCipher = func(path string, aesKey []byte, statement string) ([]map[string]any, error) {
 		return []map[string]any{{
 			"id":         int64(7),
 			"username":   "wxid_test",

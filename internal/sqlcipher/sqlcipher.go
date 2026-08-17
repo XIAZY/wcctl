@@ -14,11 +14,10 @@ import "C"
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
-	"path/filepath"
 	"unsafe"
 )
 
@@ -30,26 +29,26 @@ PRAGMA temp_store=MEMORY;
 PRAGMA query_only=ON;
 `
 
-// Query opens a SQLCipher database read-only and returns all rows from a
-// single SELECT statement. aesKey is WeChat's 32-byte final database key.
-func Query(path string, aesKey []byte, statement string, immutable bool) ([]map[string]any, error) {
+// Query creates a disposable copy-on-write clone of a SQLCipher database and
+// returns all rows from a single read-only statement. aesKey is WeChat's
+// 32-byte final database key. SQLite never opens the live database.
+func Query(path string, aesKey []byte, statement string) (rows []map[string]any, resultErr error) {
 	if len(aesKey) != 32 {
 		return nil, fmt.Errorf("database key must be 32 bytes")
 	}
-	salt, err := readSalt(path)
+	copy, err := makeWorkingCopy(path)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		resultErr = errors.Join(resultErr, copy.Close())
+	}()
 
-	target := path
-	if immutable {
-		absolutePath, err := filepath.Abs(path)
-		if err != nil {
-			return nil, fmt.Errorf("resolve database path: %w", err)
-		}
-		target = (&url.URL{Scheme: "file", Path: absolutePath, RawQuery: "immutable=1"}).String()
+	salt, err := readSalt(copy.path)
+	if err != nil {
+		return nil, err
 	}
-	return queryTarget(target, appendRawKey(aesKey, salt), statement)
+	return queryTarget(copy.path, appendRawKey(aesKey, salt), statement)
 }
 
 func readSalt(path string) ([]byte, error) {
@@ -87,7 +86,10 @@ func queryTarget(target, keySpec, statement string) ([]map[string]any, error) {
 	defer C.free(unsafe.Pointer(cTarget))
 
 	var database *C.sqlite3
-	flags := C.int(C.SQLITE_OPEN_READONLY | C.SQLITE_OPEN_URI | C.SQLITE_OPEN_NOMUTEX | C.SQLITE_OPEN_EXRESCODE)
+	// The working copy is private and disposable, so allow SQLite to create a
+	// new SHM file or recover a rollback journal there. query_only and the
+	// statement check below still prohibit caller-requested writes.
+	flags := C.int(C.SQLITE_OPEN_READWRITE | C.SQLITE_OPEN_URI | C.SQLITE_OPEN_NOMUTEX | C.SQLITE_OPEN_EXRESCODE)
 	if rc := C.sqlite3_open_v2(cTarget, &database, flags, nil); rc != C.SQLITE_OK {
 		err := sqliteError(database, "open database", rc)
 		if database != nil {
